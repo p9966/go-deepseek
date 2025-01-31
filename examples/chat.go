@@ -28,5 +28,4 @@ func Chat() {
 	}
 
 	fmt.Println(resp.Choices[0].Message.Content)
-
 }
