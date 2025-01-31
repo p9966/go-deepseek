@@ -32,7 +32,7 @@ import (
 )
 
 func main() {
-	client := deepseek.NewClient(os.Getenv("deepseek token"))
+	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
 	request := deepseek.ChatCompletionRequest{
 		Model: deepseek.DeepSeekChat,
 		Messages: []deepseek.ChatCompletionMessage{
@@ -49,6 +49,10 @@ func main() {
 		log.Fatalf("ChatCompletion failed: %v", err)
 	}
 
+	if len(resp.Choices) == 0 {
+		log.Fatal("No response choices available")
+	}
+
 	fmt.Println(resp.Choices[0].Message.Content)
 }
 
@@ -56,11 +60,11 @@ func main() {
 
 ### Getting an DeepSeek API Key:
 
-1. Visit the OpenAI website at [https://www.deepseek.com/](https://www.deepseek.com/).
+1. Visit the DeepSeek website at [https://www.deepseek.com/](https://www.deepseek.com/).
 2. If you don't have an account, click on "Sign Up" to create one. If you do, click "Log In".
 3. Once logged in, navigate to your API key management page.
 4. Click on "Create new secret key".
 5. Enter a name for your new key, then click "Create secret key".
-6. Your new API key will be displayed. Use this key to interact with the OpenAI API.
+6. Your new API key will be displayed. Use this key to interact with the DeepSeek API.
 
 **Note:** Your API key is sensitive information. Do not share it with anyone.
