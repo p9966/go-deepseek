@@ -12,7 +12,7 @@ This library provides unofficial Go clients for [DeepSeek](https://www.deepseek.
 ```
 go get github.com/p9966/go-deepseek
 ```
-Currently, go-deepseek requires Go version 1.23.5 or greater.
+Currently, go-deepseek requires Go version 1.23 or greater.
 
 
 ## Usage
