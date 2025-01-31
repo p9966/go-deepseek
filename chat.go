@@ -1,3 +1,5 @@
+// Package deepseek provides an unofficial Go client for the DeepSeek API.
+// It supports interacting with DeepSeek's chat functionality.
 package deepseek
 
 import (
@@ -19,7 +21,6 @@ const (
 
 const chatCompletionSuffix = "/chat/completions"
 
-// ------------------------------ ChatCompletionRequest ------------------------------
 type ChatCompletionRequest struct {
 	Model            string                  `json:"model"`
 	Messages         []ChatCompletionMessage `json:"messages"`
@@ -61,7 +62,6 @@ type Parameters struct {
 	Required   []string               `json:"required,omitempty"`
 }
 
-// ------------------------------ ChatCompletionResponse ------------------------------
 type ChatCompletionResponse struct {
 	ID                string   `json:"id"`                 // Unique identifier for the chat completion.
 	Object            string   `json:"object"`             // Type of the object, typically "chat.completion".
@@ -99,7 +99,6 @@ type Usage struct {
 	PromptCacheMissTokens int `json:"prompt_cache_miss_tokens"` // Number of tokens not served from cache.
 }
 
-// ------------------------------ ChatCompletionFunction ------------------------------
 func (c *Client) CreateChatCompletion(ctx context.Context, req *ChatCompletionRequest) (*ChatCompletionResponse, error) {
 	if req == nil {
 		return nil, errors.New("request can not be nil")
