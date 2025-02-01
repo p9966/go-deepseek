@@ -80,9 +80,22 @@ type Choice struct {
 }
 
 type Message struct {
-	Role             string `json:"role"`                        // Role of the message sender (e.g., "user", "assistant").
-	Content          string `json:"content"`                     // Content of the message.
-	ReasoningContent string `json:"reasoning_content,omitempty"` // Optional reasoning content.
+	Role             string     `json:"role"`                        // Role of the message sender (e.g., "user", "assistant").
+	Content          string     `json:"content"`                     // Content of the message.
+	ReasoningContent string     `json:"reasoning_content,omitempty"` // Optional reasoning content.
+	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`        // Optional list of tool calls.
+}
+
+type ToolCall struct {
+	Index    int          `json:"index"` // Index of the tool call in the list of tool calls.
+	Id       string       `json:"id"`    // ID of the tool to call.
+	Type     string       `json:"type"`  // Type of the tool call (e.g., "function").
+	Function FunctionCall `json:"function"`
+}
+
+type FunctionCall struct {
+	Name      string `json:"name"`      // Name of the function to call.
+	Arguments string `json:"arguments"` // Content of the function call.
 }
 
 type LogProbs struct {
