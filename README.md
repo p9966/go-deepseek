@@ -2,10 +2,10 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/p9966/go-deepseek.svg)](https://pkg.go.dev/github.com/p9966/go-deepseek)
 [![Go Report Card](https://goreportcard.com/badge/github.com/p9966/go-deepseek)](https://goreportcard.com/report/github.com/p9966/go-deepseek)
 
-
 This library provides unofficial Go clients for [DeepSeek](https://www.deepseek.com/). We support: 
 
-* deepseek-chat
+* chat-completion
+* FIM-completion
 
 ## Installation
 
@@ -68,3 +68,42 @@ func main() {
 6. Your new API key will be displayed. Use this key to interact with the DeepSeek API.
 
 **Note:** Your API key is sensitive information. Do not share it with anyone.
+
+### Other examples:
+<details>
+<summary>FIM-completion</summary>
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/p9966/go-deepseek"
+)
+
+func main() {
+	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
+	request := deepseek.FINCompletionRequest{
+		Model:  deepseek.DeepSeekChat,
+		Prompt: "What is the weather like today?",
+	}
+
+	ctx := context.Background()
+	resp, err := client.CreateFINCompletion(ctx, &request)
+	if err != nil {
+		log.Fatalf("Error creating completion: %v", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		log.Fatal("No response choices available")
+	}
+
+	fmt.Println(resp.Choices[0].Text)
+}
+
+```
+</details>
