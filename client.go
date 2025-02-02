@@ -6,16 +6,16 @@ import (
 )
 
 type Client struct {
-	authToken  string
-	baseUrl    string
+	AuthToken  string
+	BaseUrl    string
 	httpClient *http.Client
 }
 
 // NewClient creates a new DeepSeek client with the provided API key.
 func NewClient(token string) *Client {
 	return &Client{
-		authToken: token,
-		baseUrl:   "https://api.deepseek.com",
+		AuthToken: token,
+		BaseUrl:   "https://api.deepseek.com",
 	}
 }
 
