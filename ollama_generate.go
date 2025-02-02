@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"strconv"
 
 	deepseek "github.com/p9966/go-deepseek/internal"
 )
 
-var generateSuffix = "/api/generate"
+var ollamaGenerateSuffix = "/api/generate"
 
 type OllamaGenerateRequest struct {
 	Model     string   `json:"model"`
@@ -73,7 +75,7 @@ func (c *Client) CreateOllamaGenerate(ctx context.Context, req *OllamaGenerateRe
 		return nil, errors.New("request can not be nil")
 	}
 
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(generateSuffix).SetBody(req).Build(ctx)
+	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(ollamaGenerateSuffix).SetBody(req).Build(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +85,10 @@ func (c *Client) CreateOllamaGenerate(ctx context.Context, req *OllamaGenerateRe
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("unexpected status code: " + strconv.Itoa(resp.StatusCode))
+	}
 
 	var generateResp OllamaGenerateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&generateResp); err != nil {
