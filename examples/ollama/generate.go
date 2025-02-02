@@ -9,13 +9,15 @@ import (
 )
 
 func main() {
-	client := deepseek.NewClient("")
+	client := deepseek.Client{
+		BaseUrl: "http://localhost:11434",
+	}
 	request := deepseek.OllamaGenerateRequest{
 		Model:  "deepseek-r1:7b", // or other local models
 		Prompt: "Why is the sky blue?",
 		Stream: false,
 	}
-	// client.SetOllamaBaseUrl("http://localhost:11434")
+
 	resp, err := client.CreateOllamaGenerate(context.TODO(), &request)
 	if err != nil {
 		log.Fatalf("failed to create generate: %v", err)

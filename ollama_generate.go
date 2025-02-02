@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strings"
 
 	deepseek "github.com/p9966/go-deepseek/internal"
 )
@@ -69,22 +68,12 @@ type OllamaGenerateResponse struct {
 	EvalDuration       int64  `json:"eval_duration,omitempty"`        // time in nanoseconds spent generating the response
 }
 
-// Set ollama baseurl. The default value is http://localhost:11434
-func (c *Client) SetOllamaBaseUrl(baseUrl string) {
-	c.baseUrl = baseUrl
-}
-
 func (c *Client) CreateOllamaGenerate(ctx context.Context, req *OllamaGenerateRequest) (*OllamaGenerateResponse, error) {
 	if req == nil {
 		return nil, errors.New("request can not be nil")
 	}
 
-	// if the baseUrl is not set, use the default value
-	if len(c.baseUrl) == 0 || strings.Contains(c.baseUrl, "api.deepseek.com") {
-		c.baseUrl = "http://localhost:11434"
-	}
-
-	request, err := deepseek.NewRequestBuilder(c.authToken).SetBaseUrl(c.baseUrl).SetPath(generateSuffix).SetBody(req).Build(ctx)
+	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(generateSuffix).SetBody(req).Build(ctx)
 	if err != nil {
 		return nil, err
 	}
