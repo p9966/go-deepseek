@@ -66,7 +66,7 @@ func (c *Client) CreateFINCompletion(ctx context.Context, req *FINCompletionRequ
 		return nil, errors.New("request can not be nil")
 	}
 
-	request, err := deepseek.NewRequestBuilder(c.authToken).SetBaseUrl(c.baseUrl).SetPath(finCompletionSuffix).SetBody(req).Build(ctx)
+	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(finCompletionSuffix).SetBody(req).Build(ctx)
 	if err != nil {
 		return nil, err
 	}

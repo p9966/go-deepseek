@@ -17,7 +17,7 @@ type AuthRequest struct {
 
 type RequestBuilder interface {
 	SetBaseUrl(string) *AuthRequest
-	SetBody([]byte) *AuthRequest
+	SetBody(any) *AuthRequest
 	SetPath(string) *AuthRequest
 	Build(context.Context) (*http.Request, error)
 }
