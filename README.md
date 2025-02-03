@@ -254,5 +254,13 @@ func main() {
 ```
 </details>
 
+## Troubleshooting
+### Unable to Access DeepSeek API Platform
+If you encounter a 503 error when trying to access DeepSeek’s API platform:
+1. Check if DeepSeek’s services are down or under maintenance.
+2. Clear your browser cache and cookies.
+3. Try accessing the platform from a different network or device.
+4. Contact DeepSeek’s support team for further assistance. service@deepseek.com
+
 ## License
 This project is licensed under the [MIT License](LICENSE).
