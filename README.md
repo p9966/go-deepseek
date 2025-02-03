@@ -2,11 +2,11 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/p9966/go-deepseek.svg)](https://pkg.go.dev/github.com/p9966/go-deepseek)
 [![Go Report Card](https://goreportcard.com/badge/github.com/p9966/go-deepseek)](https://goreportcard.com/report/github.com/p9966/go-deepseek)
 
-This library provides unofficial Go clients for [DeepSeek](https://www.deepseek.com/). It currently supports: 
-
+This library provides an unofficial Go client for [DeepSeek](https://www.deepseek.com/),enabling interaction with both online and local models. It supports the following features: 
 * Chat Completion
-* FIM Completion
+* FIM (Fill-in-Middle) Completion
 * Function Calling
+* Embeddings
 
 ## Installation
 To install the library, run:
@@ -19,6 +19,7 @@ go get github.com/p9966/go-deepseek
 
 ## Usage
 ### Quick Start:
+#### Chat Completion with DeepSeek API
 Here’s an example of how to use the library for chat completion:
 ```go
 package main
@@ -58,6 +59,41 @@ func main() {
 }
 
 ```
+#### Local Model via Ollama
+To use a local model with Ollama:
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/p9966/go-deepseek"
+)
+
+func main() {
+	client := deepseek.Client{
+		BaseUrl: "http://localhost:11434",
+	}
+	request := deepseek.OllamaChatRequest{
+		Model: "deepseek-r1:7b",
+		Messages: []deepseek.OllamaChatMessage{
+			{
+				Role:    "user",
+				Content: "Hello!",
+			},
+		},
+	}
+	response, err := client.CreateOllamaChatCompletion(context.TODO(), &request)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	fmt.Println(response.Message.Content)
+}
+
+```
 
 ## Obtaining a DeepSeek API Key
 
@@ -70,9 +106,20 @@ func main() {
 
 **Important:** Keep your API key secure and do not share it publicly.
 
+## Local Model Installation
+1. Visit the [Ollama website](https://ollama.com/).
+2. Download and install Ollama.
+3. Open a terminal and run the following command to download the model:
+	```bash
+	ollama run deepseek-r1
+	```
+4. You can now use the model locally.
+
+**Note:** You can also download other models from the[Ollama model library](https://ollama.com/search) and use them in the same way.
+
 ## Other examples:
 <details>
-<summary>FIM Completion</summary>
+<summary>FIM (Fill-in-Middle) Completion</summary>
 
 ```go
 package main
@@ -171,6 +218,39 @@ func main() {
 
 	fmt.Printf("Function name: %v, args:%s\n", resp.Choices[0].Message.ToolCalls[0].Function.Name, resp.Choices[0].Message.ToolCalls[0].Function.Arguments)
 }
+```
+</details>
+
+<details>
+<summary>Embeddings</summary>
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/p9966/go-deepseek"
+)
+
+func main() {
+	client := deepseek.Client{
+		BaseUrl: "http://localhost:11434",
+	}
+	request := deepseek.OllamaEmbedRequest{
+		Model: "deepseek-r1:7b",
+		Input: "Why is the sky blue?", // []string{"Why is the sky blue?", "Why is the grass green?"}
+	}
+	response, err := client.CreateOllamaEmbed(context.TODO(), &request)
+	if err != nil {
+		log.Fatalf("failed to create ollama embed: %v", err)
+	}
+
+	fmt.Println(response.Embeddings)
+}
+
 ```
 </details>
 
