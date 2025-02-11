@@ -13,20 +13,27 @@ import (
 var ollamaChatCompletionSuffix = "/api/chat"
 
 type OllamaChatRequest struct {
-	Model     string                 `json:"model"`
-	Messages  []OllamaChatMessage    `json:"messages"`             // the messages of the chat, this can be used to keep a chat memory
-	Tools     []Tools                `json:"tools,omitempty"`      // Optional: the tools to use for the chat
-	Format    map[string]interface{} `json:"format,omitempty"`     // Optional: the format to return a response in. Format can be json or a JSON schema
-	Stream    bool                   `json:"stream"`               // Optional: if false the response will be returned as a single response object, rather than a stream of objects
-	Options   *Options               `json:"options,omitempty"`    // Optional: additional model parameters listed in the documentation for the Modelfile such as temperature, https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values
-	KeepAlive int                    `json:"keep_alive,omitempty"` // Optional: controls how long the model will stay loaded into memory following the request (default: 5m)
+	Model     string              `json:"model"`
+	Messages  []OllamaChatMessage `json:"messages"`             // the messages of the chat, this can be used to keep a chat memory
+	Tools     []Tools             `json:"tools,omitempty"`      // Optional: the tools to use for the chat
+	Format    map[string]any      `json:"format,omitempty"`     // Optional: the format to return a response in. Format can be json or a JSON schema
+	Stream    bool                `json:"stream"`               // Optional: if false the response will be returned as a single response object, rather than a stream of objects
+	Options   *Options            `json:"options,omitempty"`    // Optional: additional model parameters listed in the documentation for the Modelfile such as temperature, https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values
+	KeepAlive int                 `json:"keep_alive,omitempty"` // Optional: controls how long the model will stay loaded into memory following the request (default: 5m)
 }
 
 type OllamaChatMessage struct {
-	Role      string   `json:"role"`
-	Content   string   `json:"content"`
-	Images    []string `json:"images,omitempty"`
-	ToolCalls *[]any   `json:"tool_calls,omitempty"`
+	Role      string       `json:"role"`
+	Content   string       `json:"content"`
+	Images    []string     `json:"images,omitempty"`
+	ToolCalls []OllamaTool `json:"tool_calls,omitempty"`
+}
+
+type OllamaTool struct {
+	Function struct {
+		Name      string         `json:"name"`
+		Arguments map[string]any `json:"arguments"`
+	} `json:"function"`
 }
 
 type OllamaChatResponse struct {
