@@ -33,7 +33,7 @@ func (c *Client) CreateOllamaEmbed(ctx context.Context, req *OllamaEmbedRequest)
 		return nil, errors.New("request can not be nil")
 	}
 
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(ollamaEmbedSuffix).SetBody(req).Build(ctx)
+	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetMethod(http.MethodPost).SetBaseUrl(c.BaseUrl).SetPath(ollamaEmbedSuffix).SetBody(req).Build(ctx)
 	if err != nil {
 		return nil, err
 	}
