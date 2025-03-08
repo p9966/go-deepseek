@@ -12,6 +12,7 @@ type AuthRequest struct {
 	baseUrl   string
 	authToken string
 	path      string
+	method    string
 	body      any
 }
 
@@ -19,6 +20,7 @@ type RequestBuilder interface {
 	SetBaseUrl(string) *AuthRequest
 	SetBody(any) *AuthRequest
 	SetPath(string) *AuthRequest
+	SetMethod(string) *AuthRequest
 	Build(context.Context) (*http.Request, error)
 }
 
@@ -35,6 +37,11 @@ func (r *AuthRequest) SetBaseUrl(baseUrl string) *AuthRequest {
 
 func (r *AuthRequest) SetPath(path string) *AuthRequest {
 	r.path = path
+	return r
+}
+
+func (r *AuthRequest) SetMethod(method string) *AuthRequest {
+	r.method = method
 	return r
 }
 
@@ -55,7 +62,7 @@ func (r *AuthRequest) Build(ctx context.Context) (*http.Request, error) {
 		}
 		bodyReader = bytes.NewReader(reqBody)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.baseUrl+r.path, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, r.method, r.baseUrl+r.path, bodyReader)
 	if err != nil {
 		return nil, err
 	}
