@@ -7,6 +7,7 @@ This library provides an unofficial Go client for [DeepSeek](https://www.deepsee
 * Stream Chat Completion
 * FIM (Fill-in-Middle) Completion
 * Function Calling
+* API balance query
 * Embeddings
 
 ## Installation
@@ -36,6 +37,10 @@ import (
 
 func main() {
 	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
+	// client := deepseek.Client{
+	// 	BaseUrl:   "https://api.deepseek.ai/v1", // Custom API addresses
+	// 	AuthToken: os.Getenv("DEEPSEEK_API_KEY"),
+	// }
 	request := deepseek.ChatCompletionRequest{
 		Model: deepseek.DeepSeekChat,
 		Messages: []deepseek.ChatCompletionMessage{
@@ -79,6 +84,10 @@ import (
 
 func main() {
 	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
+	// client := deepseek.Client{
+	// 	BaseUrl:   "https://api.deepseek.ai/v1", // Custom API addresses
+	// 	AuthToken: os.Getenv("DEEPSEEK_API_KEY"),
+	// }
 	scanner := bufio.NewScanner(os.Stdin)
 
 	var messages []deepseek.ChatCompletionMessage
@@ -329,6 +338,34 @@ func main() {
 
 	fmt.Println(response.Embeddings)
 }
+
+```
+</details>
+
+<details>
+<summary>API balance query</summary>
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/p9966/go-deepseek"
+)
+
+func main() {
+	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
+	if resp, err := client.GetBalance(context.TODO()); err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println(resp.IsAvailable)
+	}
+}
+
 
 ```
 </details>
