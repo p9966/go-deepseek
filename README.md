@@ -4,6 +4,7 @@
 
 This library provides an unofficial Go client for [DeepSeek](https://www.deepseek.com/),enabling interaction with both online and local models. It supports the following features: 
 * Chat Completion
+* Stream Chat Completion
 * FIM (Fill-in-Middle) Completion
 * Function Calling
 * Embeddings
@@ -21,7 +22,7 @@ go get github.com/p9966/go-deepseek
 ### Quick Start:
 #### Chat Completion with DeepSeek API
 Here’s an example of how to use the library for chat completion:
-```go
+```go 
 package main
 
 import (
@@ -59,6 +60,84 @@ func main() {
 }
 
 ```
+
+#### Stream Chat Completion with DeepSeek API
+Here’s an example of how to use the library for stream chat completion:
+```go
+package main
+
+import (
+	"bufio"
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/p9966/go-deepseek"
+)
+
+func main() {
+	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
+	scanner := bufio.NewScanner(os.Stdin)
+
+	var messages []deepseek.ChatCompletionMessage
+
+	for {
+		fmt.Print("You: ")
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				log.Fatalf("Failed to read input: %v", err)
+			}
+			break
+		}
+
+		input := scanner.Text()
+		if input == "exit" {
+			break
+		}
+
+		messages = append(messages, deepseek.ChatCompletionMessage{
+			Role:    deepseek.ChatMessageRoleUser,
+			Content: input,
+		})
+
+		request := deepseek.StreamChatCompletionRequest{
+			Model:    deepseek.DeepSeekChat,
+			Messages: messages,
+		}
+
+		ctx := context.Background()
+		stream, err := client.CreateChatCompletionStream(ctx, request)
+		if err != nil {
+			log.Fatalf("ChatCompletionStream failed: %v", err)
+		}
+		defer stream.Close()
+
+		fmt.Print("DeepSeek: ")
+		for {
+			response, err := stream.Recv()
+			if errors.Is(err, io.EOF) {
+				fmt.Println()
+				break
+			}
+			if err != nil {
+				log.Fatalf("ChatCompletionStream stream.Recv() failed: %v", err)
+			}
+
+			if len(response.Choices) > 0 && response.Choices[0].FinishReason == "" {
+				content := response.Choices[0].Delta.Content
+				messages = append(messages, deepseek.ChatCompletionMessage{
+					Role:    deepseek.ChatMessageRoleAssistant,
+					Content: content,
+				})
+				fmt.Print(content)
+			}
+		}
+	}
+}
+```
+
 #### Local Model via Ollama
 To use a local model with Ollama:
 ```go
