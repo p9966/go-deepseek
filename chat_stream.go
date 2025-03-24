@@ -46,7 +46,9 @@ type StreamChatChoices struct {
 }
 
 type StreamChatChoiceData struct {
-	Content string `json:"content"`
+	Content          string     `json:"content"`
+	ReasoningContent string     `json:"reasoning_content"`
+	ToolCalls        []ToolCall `json:"tool_calls"`
 }
 
 type ChatCompletionStream interface {
@@ -95,7 +97,7 @@ func (s *chatCompletionStream) Close() error {
 
 func (c *Client) CreateChatCompletionStream(ctx context.Context, req StreamChatCompletionRequest) (ChatCompletionStream, error) {
 	req.Stream = true
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(chatCompletionSuffix).SetBody(req).Build(ctx)
+	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(chatCompletionSuffix).SetMethod(http.MethodPost).SetBody(req).Build(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build request: %w", err)
 	}
