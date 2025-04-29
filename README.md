@@ -2,7 +2,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/p9966/go-deepseek.svg)](https://pkg.go.dev/github.com/p9966/go-deepseek)
 [![Go Report Card](https://goreportcard.com/badge/github.com/p9966/go-deepseek)](https://goreportcard.com/report/github.com/p9966/go-deepseek)
 
-This library provides an unofficial Go client for [DeepSeek](https://www.deepseek.com/),it also supports [QwQ](https://help.aliyun.com/zh/model-studio/getting-started/what-is-model-studio), [OpenAI](https://platform.openai.com/docs/overview).enabling interaction with both online and local models. It supports the following features: 
+This library provides an unofficial Go client for [DeepSeek](https://www.deepseek.com/),it also supports [Qwen3](https://help.aliyun.com/zh/model-studio/getting-started/what-is-model-studio), [QwQ](https://help.aliyun.com/zh/model-studio/getting-started/what-is-model-studio), [OpenAI](https://platform.openai.com/docs/overview).enabling interaction with both online and local models. It supports the following features: 
 * Chat Completion
 * Stream Chat Completion
 * FIM (Fill-in-Middle) Completion
@@ -39,7 +39,7 @@ func main() {
 	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
 	// client := deepseek.Client{
 	//	BaseUrl:   "https://api.deepseek.ai/v1", // deepseek
-    //	BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",  // qwq
+    //	BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",  // qwen3
 	//	BaseUrl:   "https://api.openai.com/v1/",// openai
 	// 	AuthToken: os.Getenv("DEEPSEEK_API_KEY"),
 	// }
@@ -68,7 +68,7 @@ func main() {
 
 ```
 
-#### Stream Chat Completion with DeepSeek API
+#### Stream Chat Completion with Qwen3 API
 Here’s an example of how to use the library for stream chat completion:
 ```go
 package main
@@ -78,6 +78,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -85,15 +86,15 @@ import (
 )
 
 func main() {
-	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
-	// client := deepseek.Client{
-	// 	BaseUrl:   "https://api.deepseek.ai/v1", // Custom API addresses
-	// 	AuthToken: os.Getenv("DEEPSEEK_API_KEY"),
-	// }
+	client := deepseek.Client{
+		BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",
+		AuthToken: os.Getenv("Qwen3AuthToken"), // 获取地址：https://bailian.console.aliyun.com/?apiKey=1#/api-key
+	}
 	scanner := bufio.NewScanner(os.Stdin)
 
 	var messages []deepseek.ChatCompletionMessage
 
+	//  To do console input in debug mode, add "console": "integratedTerminal" to launch.json
 	for {
 		fmt.Print("You: ")
 		if !scanner.Scan() {
@@ -114,8 +115,10 @@ func main() {
 		})
 
 		request := deepseek.StreamChatCompletionRequest{
-			Model:    deepseek.DeepSeekChat,
+			Model: deepseek.QWEN3_235B_A22B, // https://help.aliyun.com/zh/model-studio/models
+			// Model:    "qwen3-32b",
 			Messages: messages,
+			// EnableThink: true,  开启思考模式
 		}
 
 		ctx := context.Background()
@@ -125,7 +128,7 @@ func main() {
 		}
 		defer stream.Close()
 
-		fmt.Print("DeepSeek: ")
+		fmt.Print("Qwen3: ")
 		for {
 			response, err := stream.Recv()
 			if errors.Is(err, io.EOF) {
@@ -147,6 +150,7 @@ func main() {
 		}
 	}
 }
+
 ```
 
 #### Local Model via Ollama
@@ -308,6 +312,92 @@ func main() {
 
 	fmt.Printf("Function name: %v, args:%s\n", resp.Choices[0].Message.ToolCalls[0].Function.Name, resp.Choices[0].Message.ToolCalls[0].Function.Arguments)
 }
+
+
+
+
+// ---------------------Qwen3---------------------
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"os"
+
+	"github.com/p9966/go-deepseek"
+)
+
+func main() {
+	client := deepseek.Client{
+		BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",
+		AuthToken: os.Getenv("Qwen3AuthToken"), // 获取地址：https://bailian.console.aliyun.com/?apiKey=1#/api-key
+	}
+	request := deepseek.StreamChatCompletionRequest{
+		Model: deepseek.QWEN3_235B_A22B,
+		Messages: []deepseek.ChatCompletionMessage{
+			{
+				Role:    deepseek.ChatMessageRoleUser,
+				Content: "成都天气怎么样",
+			},
+		},
+		// EnableThink: true, 开启思考模式
+		Tools: []deepseek.Tools{
+			{
+				Type: "function",
+				Function: deepseek.Function{
+					Name:        "get_weather",
+					Description: "当你想查询指定城市的天气时非常有用",
+					Parameters: &deepseek.Parameters{
+						Type: "object",
+						Properties: map[string]interface{}{
+							"location": map[string]interface{}{
+								"description": "城市或县区，比如北京市、杭州市、成都市、余杭区等",
+								"type":        "string",
+							},
+						},
+						Required: []string{"location"},
+					},
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	stream, err := client.CreateChatCompletionStream(ctx, request)
+	if err != nil {
+		log.Fatalf("ChatCompletionStream failed: %v", err)
+	}
+	defer stream.Close()
+
+	fmt.Print("Qwen3: ")
+	for {
+		response, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			fmt.Println()
+			break
+		}
+		if err != nil {
+			log.Fatalf("ChatCompletionStream stream.Recv() failed: %v", err)
+		}
+
+		if len(response.Choices) > 0 && response.Choices[0].FinishReason == "" {
+			content := response.Choices[0].Delta.ReasoningContent
+
+			fmt.Print(content)
+
+			if len(response.Choices[0].Delta.ToolCalls) > 0 {
+				if buf, err := json.Marshal(response.Choices[0].Delta.ToolCalls); err == nil {
+					fmt.Println(string(buf))
+				}
+			}
+		}
+	}
+}
+
 
 
 

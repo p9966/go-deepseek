@@ -27,6 +27,7 @@ type StreamChatCompletionRequest struct {
 	Tools            []Tools                 `json:"tools,omitempty"`
 	LogProbs         bool                    `json:"logprobs,omitempty"`
 	TopLogProbs      int                     `json:"top_logprobs,omitempty"`
+	EnableThink      bool                    `json:"enable_thinking"`
 }
 
 type StreamChatCompletionResponse struct {
