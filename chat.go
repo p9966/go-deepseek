@@ -34,6 +34,7 @@ type ChatCompletionRequest struct {
 	Tools            []Tools                 `json:"tools,omitempty"`            // Optional: List of tools
 	LogProbs         bool                    `json:"logprobs,omitempty"`         // Optional: Enable log probabilities
 	TopLogProbs      int                     `json:"top_logprobs,omitempty"`     // Optional: Number of top tokens with log probabilities, <= 20
+	ToolChoice       string                  `json:"tool_choice,omitempty"`      // Optional: Tool choice strategy, "auto" or "none"
 }
 
 type ChatCompletionMessage struct {

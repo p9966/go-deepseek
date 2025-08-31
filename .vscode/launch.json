@@ -9,10 +9,11 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/examples/qwen3_function_calling/main.go",
+            "program": "${workspaceFolder}/examples/function_calling/main.go",
             "console": "integratedTerminal",
             "env": {
-                "Qwen3AuthToken": "***"
+                "Qwen3AuthToken": "***",
+                "DEEPSEEK_API_KEY": "***"
             }
         }
     ]
