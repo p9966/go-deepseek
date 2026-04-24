@@ -18,10 +18,10 @@ func main() {
 		BaseUrl: baseURL,
 	}
 
-	// Example 1: Simple generate request
+	// 示例 1：简单生成请求
 	executeGenerateRequest(client, createGenerateRequest("Why is the sky blue?", nil))
 
-	// Example 2: Structured outputs
+	// 示例 2：结构化输出
 	structuredFormat := map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
@@ -39,11 +39,11 @@ func main() {
 	}
 	executeGenerateRequest(client, createGenerateRequest("simple is 29 years old and is busy saving the world. Respond using JSON", structuredFormat))
 
-	// Example 3: JSON mode
+	// 示例 3：JSON 模式
 	executeGenerateRequest(client, createGenerateRequest("What color is the sky at different times of the day? Respond using JSON", "json"))
 }
 
-// createGenerateRequest creates a new OllamaGenerateRequest with the given parameters.
+// createGenerateRequest 根据给定参数创建一个新的 OllamaGenerateRequest。
 func createGenerateRequest(prompt string, format any) deepseek.OllamaGenerateRequest {
 	return deepseek.OllamaGenerateRequest{
 		Model:  model,
@@ -53,7 +53,7 @@ func createGenerateRequest(prompt string, format any) deepseek.OllamaGenerateReq
 	}
 }
 
-// executeGenerateRequest executes the generate request and prints the response.
+// executeGenerateRequest 执行生成请求并打印响应结果。
 func executeGenerateRequest(client deepseek.Client, request deepseek.OllamaGenerateRequest) {
 	resp, err := client.CreateOllamaGenerate(context.TODO(), &request)
 	if err != nil {

@@ -9,10 +9,13 @@ const (
 	QWEN3_4B         = "qwen3-4b"
 	QWEN3_1_7B       = "qwen3-1.7b"
 	QWEN3_0_6B       = "qwen3-0.6b"
-	DeepSeekChat     = "deepseek-chat"
-	DeepseekReasoner = "deepseek-reasoner"
+	DeepSeekChat     = "deepseek-chat"     //  (将于 2026/07/24 弃用)
+	DeepseekReasoner = "deepseek-reasoner" // (将于 2026/07/24 弃用)
 	QWen2_5_7b       = "qwen2.5:7b"
 	QwQ_plus         = "qwq-plus"
 	QwQ_plus_latest  = "qwq-plus-latest"
 	QwQ_32b          = "qwq-32b"
+	DeepsSeekCode    = "deepseek-code"
+	DeepseekV4Flash  = "deepseek-v4-flash"
+	DeepseekV4Pro    = "deepseek-v4-pro"
 )

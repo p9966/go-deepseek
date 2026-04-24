@@ -2,28 +2,24 @@ package deepseek
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
-
-	deepseek "github.com/p9966/go-deepseek/internal"
 )
 
 var ollamaGenerateSuffix = "/api/generate"
 
 type OllamaGenerateRequest struct {
 	Model     string   `json:"model"`
-	Prompt    string   `json:"prompt"`               // Optional: the prompt to generate a response for
-	Stream    bool     `json:"stream"`               // Optional: if false the response will be returned as a single response object, rather than a stream of objects
-	Suffix    string   `json:"suffix,omitempty"`     // Optional: the text after the model response
-	Images    []string `json:"images,omitempty"`     // Optional: a list of base64-encoded images (for multimodal models such as llava)
-	Format    any      `json:"format,omitempty"`     // Optional: the format to return a response in. Format can be json or a JSON schema
-	Options   *Options `json:"options,omitempty"`    // Optional: additional model parameters listed in the documentation for the Modelfile such as temperature, https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values
-	System    string   `json:"system,omitempty"`     // Optional: system message to (overrides what is defined in the Modelfile, https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)
-	Template  string   `json:"template,omitempty"`   // Optional: the prompt template to use (overrides what is defined in the Modelfile, https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)
-	Raw       bool     `json:"raw,omitempty"`        // Optional: if true no formatting will be applied to the prompt. You may choose to use the raw parameter if you are specifying a full templated prompt in your request to the API
-	KeepAlive int      `json:"keep_alive,omitempty"` // Optional: controls how long the model will stay loaded into memory following the request (default: 5m)
+	Prompt    string   `json:"prompt"`               // 可选：用于生成响应的提示词
+	Stream    bool     `json:"stream"`               // 可选：为 false 时返回单个完整响应，而不是流式响应
+	Suffix    string   `json:"suffix,omitempty"`     // 可选：模型响应后的后缀文本
+	Images    []string `json:"images,omitempty"`     // 可选：Base64 编码图片列表，适用于 llava 等多模态模型
+	Format    any      `json:"format,omitempty"`     // 可选：返回格式，可为 json 或 JSON Schema
+	Options   *Options `json:"options,omitempty"`    // 可选：模型附加参数，例如 temperature 等 Modelfile 支持的参数
+	System    string   `json:"system,omitempty"`     // 可选：系统消息，会覆盖 Modelfile 中定义的 system
+	Template  string   `json:"template,omitempty"`   // 可选：提示模板，会覆盖 Modelfile 中定义的 template
+	Raw       bool     `json:"raw,omitempty"`        // 可选：为 true 时不对提示词做额外格式化，适合自行传入完整模板
+	KeepAlive int      `json:"keep_alive,omitempty"` // 可选：请求结束后模型在内存中的保活时长，默认 5 分钟
 }
 
 type Options struct {
@@ -59,15 +55,15 @@ type Options struct {
 type OllamaGenerateResponse struct {
 	Model              string `json:"model"`
 	CreatedAt          string `json:"created_at"`
-	Response           string `json:"response"` // empty if the response was streamed, if not streamed, this will contain the full response
+	Response           string `json:"response"` // 流式响应时该字段为空，非流式响应时包含完整结果
 	Done               bool   `json:"done"`
-	Context            []int  `json:"context,omitempty"`              // an encoding of the conversation used in this response, this can be sent in the next request to keep a conversational memory
-	TotalDuration      int64  `json:"total_duration,omitempty"`       // time spent generating the response
-	LoadDuration       int64  `json:"load_duration,omitempty"`        // time spent in nanoseconds loading the model
-	PromptEvalCount    int    `json:"prompt_eval_count,omitempty"`    // number of tokens in the prompt
-	PromptEvalDuration int64  `json:"prompt_eval_duration,omitempty"` // time spent in nanoseconds evaluating the prompt
-	EvalCount          int    `json:"eval_count,omitempty"`           // number of tokens in the response
-	EvalDuration       int64  `json:"eval_duration,omitempty"`        // time in nanoseconds spent generating the response
+	Context            []int  `json:"context,omitempty"`              // 本次响应使用的上下文编码，可在下次请求中继续复用以保持会话记忆
+	TotalDuration      int64  `json:"total_duration,omitempty"`       // 生成响应的总耗时
+	LoadDuration       int64  `json:"load_duration,omitempty"`        // 加载模型耗时，单位为纳秒
+	PromptEvalCount    int    `json:"prompt_eval_count,omitempty"`    // 提示词 token 数量
+	PromptEvalDuration int64  `json:"prompt_eval_duration,omitempty"` // 评估提示词耗时，单位为纳秒
+	EvalCount          int    `json:"eval_count,omitempty"`           // 响应 token 数量
+	EvalDuration       int64  `json:"eval_duration,omitempty"`        // 生成响应耗时，单位为纳秒
 }
 
 func (c *Client) CreateOllamaGenerate(ctx context.Context, req *OllamaGenerateRequest) (*OllamaGenerateResponse, error) {
@@ -75,23 +71,13 @@ func (c *Client) CreateOllamaGenerate(ctx context.Context, req *OllamaGenerateRe
 		return nil, errors.New("request can not be nil")
 	}
 
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetMethod(http.MethodPost).SetBaseUrl(c.BaseUrl).SetPath(ollamaGenerateSuffix).SetBody(req).Build(ctx)
+	request, err := c.newRequest(ctx, http.MethodPost, ollamaGenerateSuffix, req)
 	if err != nil {
 		return nil, err
-	}
-
-	resp, err := c.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("unexpected status code: " + strconv.Itoa(resp.StatusCode))
 	}
 
 	var generateResp OllamaGenerateResponse
-	if err := json.NewDecoder(resp.Body).Decode(&generateResp); err != nil {
+	if err := c.doJSON(request, &generateResp); err != nil {
 		return nil, err
 	}
 

@@ -21,7 +21,7 @@ func main() {
 
 	var messages []deepseek.ChatCompletionMessage
 
-	//  To do console input in debug mode, add "console": "integratedTerminal" to launch.json
+	// 若要在调试模式下使用控制台输入，请在 launch.json 中添加 "console": "integratedTerminal"
 	for {
 		fmt.Print("You: ")
 		if !scanner.Scan() {
@@ -42,10 +42,10 @@ func main() {
 		})
 
 		request := deepseek.StreamChatCompletionRequest{
-			Model: deepseek.QWEN3_235B_A22B, // https://help.aliyun.com/zh/model-studio/models
-			// Model:    "qwen3-32b",
+			Model: deepseek.QWEN3_235B_A22B, // 模型列表参考：https://help.aliyun.com/zh/model-studio/models
+			// 也可以改成其他模型，例如 "qwen3-32b"
 			Messages: messages,
-			// EnableThink: true,  开启思考模式
+			// EnableThink: true, 开启思考模式
 		}
 
 		ctx := context.Background()
