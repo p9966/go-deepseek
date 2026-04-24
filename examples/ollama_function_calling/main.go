@@ -56,7 +56,7 @@ func main() {
 	}
 }
 
-// functions
+// 工具函数
 func getWeather(args ...string) string {
 	location := args[0]
 	return fmt.Sprintf("The weather in %s is sunny", location)

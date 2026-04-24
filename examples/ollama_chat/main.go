@@ -13,11 +13,11 @@ func main() {
 		BaseUrl: "http://localhost:11434",
 	}
 
-	// Example 1: Simple chat completion
+	// 示例 1：简单聊天补全
 	simpleRequest := createChatRequest("deepseek-r1:7b", "why is the sky blue?", nil, nil)
 	executeChatRequest(client, simpleRequest)
 
-	// Example 2: Structured outputs
+	// 示例 2：结构化输出
 	structuredRequest := createChatRequest(
 		"deepseek-r1:7b",
 		"simple is 29 years old and is busy saving the world. Respond using JSON",
@@ -41,7 +41,7 @@ func main() {
 	executeChatRequest(client, structuredRequest)
 }
 
-// createChatRequest creates a new OllamaChatRequest with the given parameters.
+// createChatRequest 根据给定参数创建一个新的 OllamaChatRequest。
 func createChatRequest(model, content string, format map[string]interface{}, tools []deepseek.Tools) deepseek.OllamaChatRequest {
 	return deepseek.OllamaChatRequest{
 		Model: model,
@@ -57,7 +57,7 @@ func createChatRequest(model, content string, format map[string]interface{}, too
 	}
 }
 
-// executeChatRequest executes the chat request and prints the response.
+// executeChatRequest 执行聊天请求并打印响应结果。
 func executeChatRequest(client deepseek.Client, request deepseek.OllamaChatRequest) {
 	resp, err := client.CreateOllamaChatCompletion(context.TODO(), &request)
 	if err != nil {

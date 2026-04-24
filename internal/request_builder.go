@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type AuthRequest struct {
@@ -52,9 +54,12 @@ func (r *AuthRequest) SetBody(body any) *AuthRequest {
 
 func (r *AuthRequest) Build(ctx context.Context) (*http.Request, error) {
 	var bodyReader io.Reader
-	if v, ok := r.body.(io.Reader); ok {
+	switch v := r.body.(type) {
+	case nil:
+		bodyReader = nil
+	case io.Reader:
 		bodyReader = v
-	} else {
+	default:
 		var reqBody []byte
 		reqBody, err := json.Marshal(r.body)
 		if err != nil {
@@ -62,12 +67,32 @@ func (r *AuthRequest) Build(ctx context.Context) (*http.Request, error) {
 		}
 		bodyReader = bytes.NewReader(reqBody)
 	}
-	req, err := http.NewRequestWithContext(ctx, r.method, r.baseUrl+r.path, bodyReader)
+
+	if r.baseUrl == "" {
+		return nil, errors.New("base url can not be empty")
+	}
+	if r.method == "" {
+		return nil, errors.New("method can not be empty")
+	}
+
+	endpoint := strings.TrimRight(r.baseUrl, "/")
+	if r.path != "" {
+		if !strings.HasPrefix(r.path, "/") {
+			endpoint += "/"
+		}
+		endpoint += r.path
+	}
+
+	req, err := http.NewRequestWithContext(ctx, r.method, endpoint, bodyReader)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", r.authToken)
-	req.Header.Set("Content-Type", "application/json")
+	if r.authToken != "" {
+		req.Header.Set("Authorization", r.authToken)
+	}
+	if r.body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	return req, nil
 }

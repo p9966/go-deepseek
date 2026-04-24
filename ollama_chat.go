@@ -2,24 +2,20 @@ package deepseek
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
-
-	deepseek "github.com/p9966/go-deepseek/internal"
 )
 
 var ollamaChatCompletionSuffix = "/api/chat"
 
 type OllamaChatRequest struct {
 	Model     string              `json:"model"`
-	Messages  []OllamaChatMessage `json:"messages"`             // the messages of the chat, this can be used to keep a chat memory
-	Tools     []Tools             `json:"tools,omitempty"`      // Optional: the tools to use for the chat
-	Format    map[string]any      `json:"format,omitempty"`     // Optional: the format to return a response in. Format can be json or a JSON schema
-	Stream    bool                `json:"stream"`               // Optional: if false the response will be returned as a single response object, rather than a stream of objects
-	Options   *Options            `json:"options,omitempty"`    // Optional: additional model parameters listed in the documentation for the Modelfile such as temperature, https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values
-	KeepAlive int                 `json:"keep_alive,omitempty"` // Optional: controls how long the model will stay loaded into memory following the request (default: 5m)
+	Messages  []OllamaChatMessage `json:"messages"`             // 聊天消息列表，可用于维持会话上下文
+	Tools     []Tools             `json:"tools,omitempty"`      // 可选：本次聊天可用的工具列表
+	Format    map[string]any      `json:"format,omitempty"`     // 可选：返回格式，可为 json 或 JSON Schema
+	Stream    bool                `json:"stream"`               // 可选：为 false 时返回单个完整响应，而不是流式响应
+	Options   *Options            `json:"options,omitempty"`    // 可选：模型附加参数，例如 temperature 等 Modelfile 支持的参数
+	KeepAlive int                 `json:"keep_alive,omitempty"` // 可选：请求结束后模型在内存中的保活时长，默认 5 分钟
 }
 
 type OllamaChatMessage struct {
@@ -55,23 +51,13 @@ func (c *Client) CreateOllamaChatCompletion(ctx context.Context, req *OllamaChat
 		return nil, errors.New("request can not be nil")
 	}
 
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetMethod(http.MethodPost).SetBaseUrl(c.BaseUrl).SetPath(ollamaChatCompletionSuffix).SetBody(req).Build(ctx)
+	request, err := c.newRequest(ctx, http.MethodPost, ollamaChatCompletionSuffix, req)
 	if err != nil {
 		return nil, err
-	}
-
-	resp, err := c.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("unexpected status code: " + strconv.Itoa(resp.StatusCode))
 	}
 
 	var generateResp OllamaChatResponse
-	if err := json.NewDecoder(resp.Body).Decode(&generateResp); err != nil {
+	if err := c.doJSON(request, &generateResp); err != nil {
 		return nil, err
 	}
 

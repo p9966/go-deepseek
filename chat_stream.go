@@ -9,8 +9,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-
-	deepseek "github.com/p9966/go-deepseek/internal"
 )
 
 type StreamChatCompletionRequest struct {
@@ -98,7 +96,7 @@ func (s *chatCompletionStream) Close() error {
 
 func (c *Client) CreateChatCompletionStream(ctx context.Context, req StreamChatCompletionRequest) (ChatCompletionStream, error) {
 	req.Stream = true
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(chatCompletionSuffix).SetMethod(http.MethodPost).SetBody(req).Build(ctx)
+	request, err := c.newRequest(ctx, http.MethodPost, chatCompletionSuffix, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build request: %w", err)
 	}
@@ -108,10 +106,9 @@ func (c *Client) CreateChatCompletionStream(ctx context.Context, req StreamChatC
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+	if err := checkResponse(resp); err != nil {
 		resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
+		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

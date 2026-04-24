@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/examples/function_calling/main.go",
+            "program": "${workspaceFolder}/examples/chat/main.go",
             "console": "integratedTerminal",
             "env": {
                 "Qwen3AuthToken": "***",

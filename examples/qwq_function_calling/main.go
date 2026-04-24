@@ -22,7 +22,7 @@ func main() {
 		Messages: []deepseek.ChatCompletionMessage{
 			{
 				Role:    deepseek.ChatMessageRoleUser,
-				Content: "成都天气怎么样",
+				Content: "成都天气怎么样？",
 			},
 		},
 		Tools: []deepseek.Tools{
@@ -30,12 +30,12 @@ func main() {
 				Type: "function",
 				Function: deepseek.Function{
 					Name:        "get_weather",
-					Description: "当你想查询指定城市的天气时非常有用",
+					Description: "当你需要查询指定城市天气时使用这个工具",
 					Parameters: &deepseek.Parameters{
 						Type: "object",
 						Properties: map[string]interface{}{
 							"location": map[string]interface{}{
-								"description": "城市或县区，比如北京市、杭州市、成都市、余杭区等",
+								"description": "城市或区县，例如北京市、杭州市、成都市、高新区",
 								"type":        "string",
 							},
 						},

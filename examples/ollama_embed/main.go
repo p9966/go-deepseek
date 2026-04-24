@@ -14,7 +14,7 @@ func main() {
 	}
 	request := deepseek.OllamaEmbedRequest{
 		Model: "deepseek-r1:7b",
-		Input: "Why is the sky blue?", // []string{"Why is the sky blue?", "Why is the grass green?"}
+		Input: "Why is the sky blue?", // 也可以传入 []string{"Why is the sky blue?", "Why is the grass green?"}
 	}
 	response, err := client.CreateOllamaEmbed(context.TODO(), &request)
 	if err != nil {

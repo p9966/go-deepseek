@@ -21,9 +21,8 @@ func main() {
 
 	var messages []deepseek.ChatCompletionMessage
 
-	//  To do console input in debug mode, add "console": "integratedTerminal" to launch.json
+	// 若要在调试模式下使用控制台输入，请在 launch.json 中添加 "console": "integratedTerminal"
 	for {
-
 		fmt.Print("You: ")
 		if !scanner.Scan() {
 			if err := scanner.Err(); err != nil {

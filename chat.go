@@ -1,16 +1,11 @@
-// Package deepseek provides an unofficial Go client for the DeepSeek API.
-// It supports interacting with DeepSeek's chat functionality.
+// Package deepseek 提供 DeepSeek API 的非官方 Go 客户端。
+// 当前支持与 DeepSeek 的聊天能力进行交互。
 package deepseek
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
-	"strconv"
-
-	deepseek "github.com/p9966/go-deepseek/internal"
 )
 
 const (
@@ -25,17 +20,41 @@ type ChatCompletionRequest struct {
 	Model            string                  `json:"model"`
 	Messages         []ChatCompletionMessage `json:"messages"`
 	FrequencyPenalty float32                 `json:"frequency_penalty"`
-	MaxTokens        int                     `json:"max_tokens,omitempty"`       // Optional: Maximum tokens, > 1
-	PresencePenalty  float32                 `json:"presence_penalty,omitempty"` // Optional: Presence penalty, >= -2 and <= 2
-	Temperature      float32                 `json:"temperature,omitempty"`      // Optional: Sampling temperature, <= 2
-	TopP             float32                 `json:"top_p,omitempty"`            // Optional: Nucleus sampling parameter, <= 1
-	ResponseFormat   *ResponseFormat         `json:"response_format,omitempty"`  // Optional: Custom response format
-	Stop             []string                `json:"stop,omitempty"`             // Optional: Stop signals
-	Tools            []Tools                 `json:"tools,omitempty"`            // Optional: List of tools
-	LogProbs         bool                    `json:"logprobs,omitempty"`         // Optional: Enable log probabilities
-	TopLogProbs      int                     `json:"top_logprobs,omitempty"`     // Optional: Number of top tokens with log probabilities, <= 20
-	ToolChoice       string                  `json:"tool_choice,omitempty"`      // Optional: Tool choice strategy, "auto" or "none"
+	MaxTokens        int                     `json:"max_tokens,omitempty"`       // 可选：最大输出 token 数，需大于 1
+	PresencePenalty  float32                 `json:"presence_penalty,omitempty"` // 可选：出现惩罚，取值范围为 [-2, 2]
+	Temperature      float32                 `json:"temperature,omitempty"`      // 可选：采样温度，最大为 2
+	TopP             float32                 `json:"top_p,omitempty"`            // 可选：核采样参数，最大为 1
+	ResponseFormat   *ResponseFormat         `json:"response_format,omitempty"`  // 可选：自定义响应格式
+	Stop             []string                `json:"stop,omitempty"`             // 可选：停止生成的标记
+	Tools            []Tools                 `json:"tools,omitempty"`            // 可选：工具列表
+	LogProbs         bool                    `json:"logprobs,omitempty"`         // 可选：是否返回对数概率
+	TopLogProbs      int                     `json:"top_logprobs,omitempty"`     // 可选：返回对数概率最高的 token 数量，最大为 20
+	ToolChoice       string                  `json:"tool_choice,omitempty"`      // 可选：工具选择策略，可为 "auto" 或 "none"
+	ExtraBody        ExtraBody               `json:"extra_body,omitempty"`       // 可选：额外请求体，用于思考相关配置
+	ReasoningEffort  ReasoningEffortModel    `json:"reasoning_effort,omitempty"` // 可选：思考强度，可为 "high" 或 "max"
 }
+
+type ExtraBody struct {
+	Thinking ExtraBodyThinking `json:"thinking,omitempty"`
+}
+
+type ExtraBodyThinking struct {
+	Type ExtraBodyThinkingModel `json:"type,omitempty"`
+}
+
+type ReasoningEffortModel string
+
+const (
+	ReasoningEffortModelHigh ReasoningEffortModel = "high"
+	ReasoningEffortModelMax  ReasoningEffortModel = "max"
+)
+
+type ExtraBodyThinkingModel string
+
+const (
+	ExtraBodyThinkingModelEnabled  ExtraBodyThinkingModel = "enabled"
+	ExtraBodyThinkingModelDisabled ExtraBodyThinkingModel = "disabled"
+)
 
 type ChatCompletionMessage struct {
 	Role    string `json:"role"`
@@ -52,65 +71,65 @@ type Tools struct {
 }
 
 type Function struct {
-	Name        string      `json:"name"`                 // The name of the function (required)
-	Description string      `json:"description"`          // Description of the function (required)
-	Parameters  *Parameters `json:"parameters,omitempty"` // Parameters schema (optional)
+	Name        string      `json:"name"`                 // 必填：函数名称
+	Description string      `json:"description"`          // 必填：函数描述
+	Parameters  *Parameters `json:"parameters,omitempty"` // 可选：参数结构定义
 }
 
 type Parameters struct {
-	Type       string                 `json:"type"` // Type of the parameters, e.g., "object" (required)
+	Type       string                 `json:"type"` // 必填：参数类型，例如 "object"
 	Properties map[string]interface{} `json:"properties,omitempty"`
 	Required   []string               `json:"required,omitempty"`
 }
 
 type ChatCompletionResponse struct {
-	ID                string   `json:"id"`                 // Unique identifier for the chat completion.
-	Object            string   `json:"object"`             // Type of the object, typically "chat.completion".
-	Created           int64    `json:"created"`            // Timestamp when the chat completion was created.
-	Model             string   `json:"model"`              // The model used for generating the completion.
-	Choices           []Choice `json:"choices"`            // List of completion choices generated by the model.
-	Usage             Usage    `json:"usage"`              // Token usage statistics.
-	SystemFingerprint string   `json:"system_fingerprint"` // Fingerprint of the system configuration.
+	ID                string   `json:"id"`                 // 聊天补全结果的唯一标识
+	Object            string   `json:"object"`             // 对象类型，通常为 "chat.completion"
+	Created           int64    `json:"created"`            // 聊天补全创建时间戳
+	Model             string   `json:"model"`              // 生成该结果所使用的模型
+	Choices           []Choice `json:"choices"`            // 模型生成的候选结果列表
+	Usage             Usage    `json:"usage"`              // token 使用统计信息
+	SystemFingerprint string   `json:"system_fingerprint"` // 系统配置指纹
 }
 
 type Choice struct {
-	Index        int       `json:"index"`              // Index of the choice in the list of choices.
-	Message      Message   `json:"message"`            // The message generated by the model.
-	LogProbs     *LogProbs `json:"logprobs,omitempty"` // Log probabilities of the tokens, if available.
-	FinishReason string    `json:"finish_reason"`      // Reason why the completion finished.
+	Index        int       `json:"index"`              // 当前候选结果在列表中的索引
+	Message      Message   `json:"message"`            // 模型生成的消息内容
+	LogProbs     *LogProbs `json:"logprobs,omitempty"` // token 的对数概率信息
+	FinishReason string    `json:"finish_reason"`      // 生成结束原因
 }
 
 type Message struct {
-	Role             string     `json:"role"`                        // Role of the message sender (e.g., "user", "assistant").
-	Content          string     `json:"content"`                     // Content of the message.
-	ReasoningContent string     `json:"reasoning_content,omitempty"` // Optional reasoning content.
-	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`        // Optional list of tool calls.
+	Role             string     `json:"role"`                        // 消息发送者角色，例如 "user"、"assistant"
+	Content          string     `json:"content"`                     // 消息内容
+	ReasoningContent string     `json:"reasoning_content,omitempty"` // 可选：思考过程内容
+	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`        // 可选：工具调用列表
 }
 
 type ToolCall struct {
-	Index    int          `json:"index"` // Index of the tool call in the list of tool calls.
-	Id       string       `json:"id"`    // ID of the tool to call.
-	Type     string       `json:"type"`  // Type of the tool call (e.g., "function").
+	Index    int          `json:"index"` // 当前工具调用在列表中的索引
+	Id       string       `json:"id"`    // 工具调用 ID
+	Type     string       `json:"type"`  // 工具调用类型，例如 "function"
 	Function FunctionCall `json:"function"`
 }
 
 type FunctionCall struct {
-	Name      string `json:"name"`      // Name of the function to call.
-	Arguments string `json:"arguments"` // Content of the function call.
+	Name      string `json:"name"`      // 要调用的函数名称
+	Arguments string `json:"arguments"` // 函数调用参数内容
 }
 
 type LogProbs struct {
-	Tokens        []string             `json:"tokens,omitempty"`         // List of tokens.
-	TokenLogProbs []float64            `json:"token_logprobs,omitempty"` // Log probabilities of each token.
-	TopLogProbs   []map[string]float64 `json:"top_logprobs,omitempty"`   // Top log probabilities for each token.
+	Tokens        []string             `json:"tokens,omitempty"`         // token 列表
+	TokenLogProbs []float64            `json:"token_logprobs,omitempty"` // 每个 token 的对数概率
+	TopLogProbs   []map[string]float64 `json:"top_logprobs,omitempty"`   // 每个 token 对应的最高对数概率集合
 }
 
 type Usage struct {
-	PromptTokens          int `json:"prompt_tokens"`            // Number of tokens used in the prompt.
-	CompletionTokens      int `json:"completion_tokens"`        // Number of tokens used in the completion.
-	TotalTokens           int `json:"total_tokens"`             // Total number of tokens used.
-	PromptCacheHitTokens  int `json:"prompt_cache_hit_tokens"`  // Number of tokens served from cache.
-	PromptCacheMissTokens int `json:"prompt_cache_miss_tokens"` // Number of tokens not served from cache.
+	PromptTokens          int `json:"prompt_tokens"`            // 提示词使用的 token 数
+	CompletionTokens      int `json:"completion_tokens"`        // 补全内容使用的 token 数
+	TotalTokens           int `json:"total_tokens"`             // 总 token 数
+	PromptCacheHitTokens  int `json:"prompt_cache_hit_tokens"`  // 命中缓存的 token 数
+	PromptCacheMissTokens int `json:"prompt_cache_miss_tokens"` // 未命中缓存的 token 数
 }
 
 func (c *Client) CreateChatCompletion(ctx context.Context, req *ChatCompletionRequest) (*ChatCompletionResponse, error) {
@@ -118,27 +137,13 @@ func (c *Client) CreateChatCompletion(ctx context.Context, req *ChatCompletionRe
 		return nil, errors.New("request can not be nil")
 	}
 
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetMethod(http.MethodPost).SetBaseUrl(c.BaseUrl).SetPath(chatCompletionSuffix).SetBody(req).Build(ctx)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("unexpected status code: " + strconv.Itoa(resp.StatusCode))
-	}
-
-	buf, err := io.ReadAll(resp.Body)
+	request, err := c.newRequest(ctx, http.MethodPost, chatCompletionSuffix, req)
 	if err != nil {
 		return nil, err
 	}
 
 	var result ChatCompletionResponse
-	if err := json.Unmarshal(buf, &result); err != nil {
+	if err := c.doJSON(request, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil

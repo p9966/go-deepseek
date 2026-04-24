@@ -2,12 +2,7 @@ package deepseek
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"net/http"
-	"strconv"
-
-	deepseek "github.com/p9966/go-deepseek/internal"
 )
 
 type BalanceResponse struct {
@@ -25,26 +20,15 @@ type BalanceInfo struct {
 const BalanceSuffix = "/user/balance"
 
 func (c *Client) GetBalance(ctx context.Context) (*BalanceResponse, error) {
-	request, err := deepseek.NewRequestBuilder(c.AuthToken).SetBaseUrl(c.BaseUrl).SetPath(BalanceSuffix).SetMethod(http.MethodGet).Build(ctx)
+	request, err := c.newRequest(ctx, http.MethodGet, BalanceSuffix, nil)
 	if err != nil {
 		return nil, err
-	}
-
-	resp, err := c.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("unexpected status code:" + strconv.Itoa(resp.StatusCode))
 	}
 
 	var result BalanceResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := c.doJSON(request, &result); err != nil {
 		return nil, err
-	} else {
-		return &result, nil
 	}
 
+	return &result, nil
 }
