@@ -12,13 +12,19 @@ import (
 func main() {
 	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
 	request := deepseek.ChatCompletionRequest{
-		Model: deepseek.DeepSeekChat,
+		Model: deepseek.DeepseekV4Pro,
 		Messages: []deepseek.ChatCompletionMessage{
 			{
 				Role:    deepseek.ChatMessageRoleUser,
 				Content: "Hello!",
 			},
 		},
+		ExtraBody: deepseek.ExtraBody{
+			Thinking: deepseek.ExtraBodyThinking{
+				Type: deepseek.ExtraBodyThinkingModelEnabled,
+			},
+		},
+		ReasoningEffort: deepseek.ReasoningEffortModelMax,
 	}
 
 	ctx := context.Background()
