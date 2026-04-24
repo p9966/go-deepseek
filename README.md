@@ -2,28 +2,28 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/p9966/go-deepseek.svg)](https://pkg.go.dev/github.com/p9966/go-deepseek)
 [![Go Report Card](https://goreportcard.com/badge/github.com/p9966/go-deepseek)](https://goreportcard.com/report/github.com/p9966/go-deepseek)
 
-This library provides an unofficial Go client for [DeepSeek](https://www.deepseek.com/),it also supports [Qwen3](https://help.aliyun.com/zh/model-studio/getting-started/what-is-model-studio), [QwQ](https://help.aliyun.com/zh/model-studio/getting-started/what-is-model-studio), [OpenAI](https://platform.openai.com/docs/overview).enabling interaction with both online and local models. It supports the following features: 
-* Chat Completion
-* Stream Chat Completion
-* FIM (Fill-in-Middle) Completion
-* Function Calling
-* API balance query
-* Embeddings
+`go-deepseek` is an unofficial Go client for DeepSeek-compatible APIs. It can be used with DeepSeek, Qwen3/QwQ via DashScope-compatible endpoints, OpenAI-compatible APIs, and local Ollama models.
+
+## Features
+- Chat completions
+- Streaming chat completions
+- Function calling / tool calling
+- FIM (Fill-in-Middle) completions
+- Embeddings through Ollama
+- DeepSeek account balance query
+- Configurable `BaseUrl`, timeout, and custom `http.Client`
 
 ## Installation
-To install the library, run:
-
-```
+```bash
 go get github.com/p9966/go-deepseek
 ```
-**Note:** This library requires Go version 1.23 or higher.
 
+Requires Go `1.23+`.
 
-## Usage
-### Quick Start:
-#### Chat Completion with DeepSeek API
-Here’s an example of how to use the library for chat completion:
-```go 
+## Quick Start
+This is the fastest way to call the default DeepSeek API:
+
+```go
 package main
 
 import (
@@ -37,44 +37,73 @@ import (
 
 func main() {
 	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
-	// client := deepseek.Client{
-	//	BaseUrl:   "https://api.deepseek.ai/v1", // deepseek
-    //	BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",  // qwen3
-	//	BaseUrl:   "https://api.openai.com/v1/",// openai
-	// 	AuthToken: os.Getenv("DEEPSEEK_API_KEY"),
-	// }
-	request := deepseek.ChatCompletionRequest{
-		Model: deepseek.DeepSeekChat,
+
+	req := deepseek.ChatCompletionRequest{
+		Model: deepseek.DeepseekV4Pro,
 		Messages: []deepseek.ChatCompletionMessage{
 			{
 				Role:    deepseek.ChatMessageRoleUser,
-				Content: "Hello!",
+				Content: "Explain why the sky is blue in one paragraph.",
 			},
 		},
 	}
 
-	ctx := context.Background()
-	resp, err := client.CreateChatCompletion(ctx, &request)
+	resp, err := client.CreateChatCompletion(context.Background(), &req)
 	if err != nil {
-		log.Fatalf("ChatCompletion failed: %v", err)
+		log.Fatal(err)
 	}
 
 	if len(resp.Choices) == 0 {
-		log.Fatal("No response choices available")
+		log.Fatal("no response choices returned")
 	}
 
 	fmt.Println(resp.Choices[0].Message.Content)
 }
-
 ```
 
-#### Stream Chat Completion with Qwen3 API
-Here’s an example of how to use the library for stream chat completion:
+## Configure Another Compatible Endpoint
+The client defaults to `https://api.deepseek.com`, but you can point it to any compatible endpoint.
+
+### Qwen3 / QwQ via DashScope
+```go
+client := deepseek.NewClient(
+	os.Getenv("QWEN3_AUTH_TOKEN"),
+	deepseek.WithBaseURL("https://dashscope.aliyuncs.com/compatible-mode/v1"),
+)
+```
+
+### OpenAI-compatible endpoint
+```go
+client := deepseek.NewClient(
+	os.Getenv("OPENAI_API_KEY"),
+	deepseek.WithBaseURL("https://api.openai.com/v1"),
+)
+```
+
+### Custom timeout or HTTP client
+```go
+client := deepseek.NewClient(
+	os.Getenv("DEEPSEEK_API_KEY"),
+	deepseek.WithTimeout(30*time.Second),
+)
+```
+
+Or:
+
+```go
+client := deepseek.NewClient(
+	os.Getenv("DEEPSEEK_API_KEY"),
+	deepseek.WithHTTPClient(myHTTPClient),
+)
+```
+
+## Streaming Chat Completion
+Use `CreateChatCompletionStream` when you want tokens as they arrive:
+
 ```go
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -86,75 +115,102 @@ import (
 )
 
 func main() {
-	client := deepseek.Client{
-		BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",
-		AuthToken: os.Getenv("Qwen3AuthToken"), // 获取地址：https://bailian.console.aliyun.com/?apiKey=1#/api-key
+	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
+
+	stream, err := client.CreateChatCompletionStream(context.Background(), deepseek.StreamChatCompletionRequest{
+		Model: deepseek.DeepseekV4Flash,
+		Messages: []deepseek.ChatCompletionMessage{
+			{
+				Role:    deepseek.ChatMessageRoleUser,
+				Content: "Write a short haiku about Go concurrency.",
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
-	scanner := bufio.NewScanner(os.Stdin)
+	defer stream.Close()
 
-	var messages []deepseek.ChatCompletionMessage
-
-	//  To do console input in debug mode, add "console": "integratedTerminal" to launch.json
 	for {
-		fmt.Print("You: ")
-		if !scanner.Scan() {
-			if err := scanner.Err(); err != nil {
-				log.Fatalf("Failed to read input: %v", err)
-			}
+		resp, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
 			break
 		}
-
-		input := scanner.Text()
-		if input == "exit" {
-			break
-		}
-
-		messages = append(messages, deepseek.ChatCompletionMessage{
-			Role:    deepseek.ChatMessageRoleUser,
-			Content: input,
-		})
-
-		request := deepseek.StreamChatCompletionRequest{
-			Model: deepseek.QWEN3_235B_A22B, // https://help.aliyun.com/zh/model-studio/models
-			// Model:    "qwen3-32b",
-			Messages: messages,
-			// EnableThink: true,  开启思考模式
-		}
-
-		ctx := context.Background()
-		stream, err := client.CreateChatCompletionStream(ctx, request)
 		if err != nil {
-			log.Fatalf("ChatCompletionStream failed: %v", err)
+			log.Fatal(err)
 		}
-		defer stream.Close()
 
-		fmt.Print("Qwen3: ")
-		for {
-			response, err := stream.Recv()
-			if errors.Is(err, io.EOF) {
-				fmt.Println()
-				break
-			}
-			if err != nil {
-				log.Fatalf("ChatCompletionStream stream.Recv() failed: %v", err)
-			}
-
-			if len(response.Choices) > 0 && response.Choices[0].FinishReason == "" {
-				content := response.Choices[0].Delta.Content
-				messages = append(messages, deepseek.ChatCompletionMessage{
-					Role:    deepseek.ChatMessageRoleAssistant,
-					Content: content,
-				})
-				fmt.Print(content)
-			}
+		if len(resp.Choices) == 0 {
+			continue
 		}
+
+		fmt.Print(resp.Choices[0].Delta.Content)
 	}
 }
-
 ```
 
-#### Local Model via Ollama
-To use a local model with Ollama:
+## Function Calling
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/p9966/go-deepseek"
+)
+
+func main() {
+	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
+
+	req := deepseek.ChatCompletionRequest{
+		Model: deepseek.DeepseekV4Pro,
+		Messages: []deepseek.ChatCompletionMessage{
+			{
+				Role:    deepseek.ChatMessageRoleUser,
+				Content: "What's the weather in Hangzhou?",
+			},
+		},
+		Tools: []deepseek.Tools{
+			{
+				Type: "function",
+				Function: deepseek.Function{
+					Name:        "get_weather",
+					Description: "Get weather for a city",
+					Parameters: &deepseek.Parameters{
+						Type: "object",
+						Properties: map[string]interface{}{
+							"location": map[string]interface{}{
+								"type":        "string",
+								"description": "City name",
+							},
+						},
+						Required: []string{"location"},
+					},
+				},
+			},
+		},
+	}
+
+	resp, err := client.CreateChatCompletion(context.Background(), &req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(resp.Choices) == 0 || len(resp.Choices[0].Message.ToolCalls) == 0 {
+		log.Fatal("no tool call returned")
+	}
+
+	call := resp.Choices[0].Message.ToolCalls[0]
+	fmt.Printf("tool=%s args=%s\n", call.Function.Name, call.Function.Arguments)
+}
+```
+
+## Local Models with Ollama
+You can also use local models through Ollama:
+
 ```go
 package main
 
@@ -167,10 +223,12 @@ import (
 )
 
 func main() {
-	client := deepseek.Client{
-		BaseUrl: "http://localhost:11434",
-	}
-	request := deepseek.OllamaChatRequest{
+	client := deepseek.NewClient(
+		"",
+		deepseek.WithBaseURL("http://localhost:11434"),
+	)
+
+	req := deepseek.OllamaChatRequest{
 		Model: "deepseek-r1:7b",
 		Messages: []deepseek.OllamaChatMessage{
 			{
@@ -179,380 +237,53 @@ func main() {
 			},
 		},
 	}
-	response, err := client.CreateOllamaChatCompletion(context.TODO(), &request)
+
+	resp, err := client.CreateOllamaChatCompletion(context.Background(), &req)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
-	}
-
-	fmt.Println(response.Message.Content)
-}
-
-```
-
-## Obtaining a DeepSeek API Key
-
-1. Visit the DeepSeek website [DeepSeek website](https://www.deepseek.com/).
-2. Sign up or log in to your account.
-3. Navigate to the API key management page.
-4. Click **"Create new secret key"**.
-5. Enter a name for your key and confirm.
-6. Your API key will be displayed. Use it to interact with the DeepSeek API.
-
-**Important:** Keep your API key secure and do not share it publicly.
-
-## Local Model Installation
-1. Visit the [Ollama website](https://ollama.com/).
-2. Download and install Ollama.
-3. Open a terminal and run the following command to download the model:
-	```bash
-	ollama run deepseek-r1
-	```
-4. You can now use the model locally.
-
-**Note:** You can also download other models from the[Ollama model library](https://ollama.com/search) and use them in the same way.
-
-## Other examples:
-<details>
-<summary>FIM (Fill-in-Middle) Completion</summary>
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"log"
-	"os"
-
-	"github.com/p9966/go-deepseek"
-)
-
-func main() {
-	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
-	request := deepseek.FINCompletionRequest{
-		Model:  deepseek.DeepSeekChat,
-		Prompt: "What is the weather like today?",
-	}
-
-	ctx := context.Background()
-	resp, err := client.CreateFINCompletion(ctx, &request)
-	if err != nil {
-		log.Fatalf("Error creating completion: %v", err)
-	}
-
-	if len(resp.Choices) == 0 {
-		log.Fatal("No response choices available")
-	}
-
-	fmt.Println(resp.Choices[0].Text)
-}
-
-```
-</details>
-
-<details>
-<summary>Function Calling</summary>
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"log"
-	"os"
-
-	"github.com/p9966/go-deepseek"
-)
-
-func main() {
-	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
-	request := deepseek.ChatCompletionRequest{
-		Model: deepseek.DeepSeekChat,
-		Messages: []deepseek.ChatCompletionMessage{
-			{
-				Role:    deepseek.ChatMessageRoleUser,
-				Content: "How's the weather in Hangzhou?",
-			},
-		},
-		Tools: []deepseek.Tools{
-			{
-				Type: "function",
-				Function: deepseek.Function{
-					Name:        "get_weather",
-					Description: "Get weather of an location, the user shoud supply a location first",
-					Parameters: &deepseek.Parameters{
-						Type: "object",
-						Properties: map[string]interface{}{
-							"location": map[string]interface{}{
-								"description": "The location to get weather",
-								"type":        "string",
-							},
-						},
-						Required: []string{"location"},
-					},
-				},
-			},
-		},
-	}
-
-	ctx := context.Background()
-	resp, err := client.CreateChatCompletion(ctx, &request)
-	if err != nil {
-		log.Fatalf("ChatCompletion failed: %v", err)
-	}
-
-	if len(resp.Choices) == 0 {
-		log.Fatal("No response choices available")
-	}
-
-	if len(resp.Choices[0].Message.ToolCalls) == 0 {
-		log.Fatal("No function calls available")
-	}
-
-	fmt.Printf("Function name: %v, args:%s\n", resp.Choices[0].Message.ToolCalls[0].Function.Name, resp.Choices[0].Message.ToolCalls[0].Function.Arguments)
-}
-
-
-
-
-// ---------------------Qwen3---------------------
-package main
-
-import (
-	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"log"
-	"os"
-
-	"github.com/p9966/go-deepseek"
-)
-
-func main() {
-	client := deepseek.Client{
-		BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",
-		AuthToken: os.Getenv("Qwen3AuthToken"), // 获取地址：https://bailian.console.aliyun.com/?apiKey=1#/api-key
-	}
-	request := deepseek.StreamChatCompletionRequest{
-		Model: deepseek.QWEN3_235B_A22B,
-		Messages: []deepseek.ChatCompletionMessage{
-			{
-				Role:    deepseek.ChatMessageRoleUser,
-				Content: "成都天气怎么样",
-			},
-		},
-		// EnableThink: true, 开启思考模式
-		Tools: []deepseek.Tools{
-			{
-				Type: "function",
-				Function: deepseek.Function{
-					Name:        "get_weather",
-					Description: "当你想查询指定城市的天气时非常有用",
-					Parameters: &deepseek.Parameters{
-						Type: "object",
-						Properties: map[string]interface{}{
-							"location": map[string]interface{}{
-								"description": "城市或县区，比如北京市、杭州市、成都市、余杭区等",
-								"type":        "string",
-							},
-						},
-						Required: []string{"location"},
-					},
-				},
-			},
-		},
-	}
-
-	ctx := context.Background()
-	stream, err := client.CreateChatCompletionStream(ctx, request)
-	if err != nil {
-		log.Fatalf("ChatCompletionStream failed: %v", err)
-	}
-	defer stream.Close()
-
-	fmt.Print("Qwen3: ")
-	for {
-		response, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
-			fmt.Println()
-			break
-		}
-		if err != nil {
-			log.Fatalf("ChatCompletionStream stream.Recv() failed: %v", err)
-		}
-
-		if len(response.Choices) > 0 && response.Choices[0].FinishReason == "" {
-			content := response.Choices[0].Delta.ReasoningContent
-
-			fmt.Print(content)
-
-			if len(response.Choices[0].Delta.ToolCalls) > 0 {
-				if buf, err := json.Marshal(response.Choices[0].Delta.ToolCalls); err == nil {
-					fmt.Println(string(buf))
-				}
-			}
-		}
-	}
-}
-
-
-
-
-// ---------------------qwq---------------------
-package main
-
-import (
-	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"log"
-	"os"
-
-	"github.com/p9966/go-deepseek"
-)
-
-func main() {
-	client := deepseek.Client{
-		BaseUrl:   "https://dashscope.aliyuncs.com/compatible-mode/v1",
-		AuthToken: os.Getenv("QWQ_AUTH_TOKEN"), // 获取地址：https://bailian.console.aliyun.com/?apiKey=1#/api-key
-	}
-	request := deepseek.StreamChatCompletionRequest{
-		Model: deepseek.QwQ_32b,
-		Messages: []deepseek.ChatCompletionMessage{
-			{
-				Role:    deepseek.ChatMessageRoleUser,
-				Content: "成都天气怎么样",
-			},
-		},
-		Tools: []deepseek.Tools{
-			{
-				Type: "function",
-				Function: deepseek.Function{
-					Name:        "get_weather",
-					Description: "当你想查询指定城市的天气时非常有用",
-					Parameters: &deepseek.Parameters{
-						Type: "object",
-						Properties: map[string]interface{}{
-							"location": map[string]interface{}{
-								"description": "城市或县区，比如北京市、杭州市、成都市、余杭区等",
-								"type":        "string",
-							},
-						},
-						Required: []string{"location"},
-					},
-				},
-			},
-		},
-	}
-
-	ctx := context.Background()
-	stream, err := client.CreateChatCompletionStream(ctx, request)
-	if err != nil {
-		log.Fatalf("ChatCompletionStream failed: %v", err)
-	}
-	defer stream.Close()
-
-	fmt.Print("QWQ: ")
-	for {
-		response, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
-			fmt.Println()
-			break
-		}
-		if err != nil {
-			log.Fatalf("ChatCompletionStream stream.Recv() failed: %v", err)
-		}
-
-		if len(response.Choices) > 0 && response.Choices[0].FinishReason == "" {
-			content := response.Choices[0].Delta.ReasoningContent
-
-			fmt.Print(content)
-
-			if len(response.Choices[0].Delta.ToolCalls) > 0 {
-				if buf, err := json.Marshal(response.Choices[0].Delta.ToolCalls); err == nil {
-					fmt.Println(string(buf))
-				}
-			}
-		}
-	}
-}
-
-```
-</details>
-
-<details>
-<summary>Embeddings</summary>
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"log"
-
-	"github.com/p9966/go-deepseek"
-)
-
-func main() {
-	client := deepseek.Client{
-		BaseUrl: "http://localhost:11434",
-	}
-	request := deepseek.OllamaEmbedRequest{
-		Model: "deepseek-r1:7b",
-		Input: "Why is the sky blue?", // []string{"Why is the sky blue?", "Why is the grass green?"}
-	}
-	response, err := client.CreateOllamaEmbed(context.TODO(), &request)
-	if err != nil {
-		log.Fatalf("failed to create ollama embed: %v", err)
-	}
-
-	fmt.Println(response.Embeddings)
-}
-
-```
-</details>
-
-<details>
-<summary>API balance query</summary>
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"log"
-	"os"
-
-	"github.com/p9966/go-deepseek"
-)
-
-func main() {
-	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
-	if resp, err := client.GetBalance(context.TODO()); err != nil {
 		log.Fatal(err)
-	} else {
-		fmt.Println(resp.IsAvailable)
 	}
+
+	fmt.Println(resp.Message.Content)
 }
-
-
 ```
-</details>
 
-## Troubleshooting
-### Unable to Access DeepSeek API Platform
-If you encounter a 503 error when trying to access DeepSeek’s API platform:
-1. Check if DeepSeek’s services are down or under maintenance.
-2. Clear your browser cache and cookies.
-3. Try accessing the platform from a different network or device.
-4. Contact DeepSeek’s support team for further assistance. service@deepseek.com
+If you do not have Ollama installed yet:
+
+```bash
+ollama run deepseek-r1
+```
+
+## Example Index
+Runnable examples live in [`examples/`](./examples):
+
+| Scenario | Path |
+| --- | --- |
+| Chat completion | [`examples/chat`](./examples/chat) |
+| Stream chat completion | [`examples/chat_stream`](./examples/chat_stream) |
+| Function calling | [`examples/function_calling`](./examples/function_calling) |
+| FIM completion | [`examples/fin`](./examples/fin) |
+| Balance query | [`examples/balance`](./examples/balance) |
+| Ollama chat | [`examples/ollama_chat`](./examples/ollama_chat) |
+| Ollama generate | [`examples/ollama_generate`](./examples/ollama_generate) |
+| Ollama embeddings | [`examples/ollama_embed`](./examples/ollama_embed) |
+| Ollama function calling | [`examples/ollama_function_calling`](./examples/ollama_function_calling) |
+| Qwen3 stream chat | [`examples/qwen3_chat_stream`](./examples/qwen3_chat_stream) |
+| Qwen3 function calling | [`examples/qwen3_function_calling`](./examples/qwen3_function_calling) |
+| QwQ stream chat | [`examples/qwq_chat_stream`](./examples/qwq_chat_stream) |
+| QwQ function calling | [`examples/qwq_function_calling`](./examples/qwq_function_calling) |
+
+## Notes
+- `NewClient(token)` uses DeepSeek's default base URL automatically.
+- Plain tokens are sent as `Bearer <token>` automatically.
+- For compatible providers, set a custom base URL with `WithBaseURL(...)`.
+- For local Ollama usage, no auth token is required.
+
+## Development
+Run tests with:
+
+```bash
+go test ./...
+```
 
 ## License
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](./LICENSE).
